@@ -1,0 +1,35 @@
+* {
+  box-sizing: border-box;
+}
+div.content-box {
+  display: flex;
+  margin-top: 2rem;
+  margin-left: 1rem;
+}
+aside {
+  display: inline-block;
+  float: left;
+  width: 20%;
+
+}
+aside section {
+  margin-left: 2rem;
+  padding-left: 1rem;
+  padding-top: .5rem;
+}
+.selector {
+  display: flex;
+  flex-direction: column;
+  /* padding-left: 2rem; */
+  margin-left: 2rem;
+  margin-top: .25rem;
+}
+main {
+  width: 80%;
+  /* border-style: solid; */
+}
+main::after {
+  content: "";
+  clear: both;
+  display: table;
+}
