@@ -9,6 +9,7 @@ import os
 import pyodbc
 import numpy as np
 
+cnty_code_dict = {'033':'King', '035':'Kitsap', '053':'Pierce', '061':'Snohomish'}
 def sqlconn(dbname):
     # create Elmer connection
     con = pyodbc.connect('DRIVER={SQL Server};SERVER=AWS-PROD-SQL\COHO;DATABASE=' + dbname + ';trusted_connection=true')
@@ -21,6 +22,7 @@ def query_tblOfmSaep():
     query = "SELECT CountyID, Year, AttributeDesc, sum(Estimate) as Estimate FROM " + table_name + " GROUP BY CountyID, Year, AttributeDesc"
     df = pd.read_sql(query, con)
     con.close()
+    df['CountyName'] = df['CountyID'].map(cnty_code_dict)
     return(df)
 
 df = query_tblOfmSaep()
@@ -30,7 +32,7 @@ app = dash.Dash(__name__)
 app.layout = html.Div(children=[
 
     html.Header(className="jumbotron", children=[ 
-        html.H1(className="display-3",
+        html.H1(className="display-head",
         children='Office of Financial Management (OFM), Small Area Estimates'
         ),
 
@@ -40,20 +42,20 @@ app.layout = html.Div(children=[
 
     
     html.Div(className='content-box', children=[
-        
             html.Aside(className="card border-secondary mb-3", children=[
                 html.Section(className="form-check", children=[ 
                     html.Legend('County'),
-                    dcc.RadioItems(id='county-id-radioitem',
-                                   className="selector",
+                      dcc.Checklist(id='county-id-checklist',
+                                  className="selector",
                         options=[
                             {'label':'King', 'value':'033'},
                             {'label':'Kitsap', 'value':'035'},
                             {'label':'Pierce', 'value':'053'},
                             {'label':'Snohomish', 'value':'061'}
                             ],
-                        value='033'
-                      )]),
+                        value=['033', '035', '053', '061']
+                      )]
+                      ), # end Section
                 html.Section(className="form-check", children=[ 
                     html.Legend('Estimate Type'),
                     dcc.RadioItems(id='estimate-type-radioitem',
@@ -67,9 +69,8 @@ app.layout = html.Div(children=[
                             ],
                         value='Total Population'
               )])         
-            ])# end Aside
-           
-      , 
+            ]) # end Aside
+            , 
         html.Main(children=[
             dcc.Graph(id='county-graph')
             ]) # end Main
@@ -80,18 +81,20 @@ app.layout = html.Div(children=[
 @app.callback(
        Output(component_id='county-graph', component_property='figure'),
        [Input(component_id='estimate-type-radioitem', component_property='value'),
-        Input(component_id='county-id-radioitem', component_property='value')
+        Input(component_id='county-id-checklist', component_property='value')
+        #Input(component_id='county-id-radioitem', component_property='value')
         ]
        )
-def update_county_graph(attribute, countyid):
-    filtered_df = df[(df.AttributeDesc == attribute) & (df.CountyID == countyid)]
+def update_county_graph(attribute, countyids):
+    filtered_df = df[(df.AttributeDesc == attribute) & (df['CountyID'].isin(countyids))]
     traces = []
-    df_by_county = filtered_df
-    traces.append(go.Bar(
-        x = df_by_county['Year'],
-        y = df_by_county['Estimate'],
-        name = countyid
-        ))
+    for i in df['CountyName'].unique():
+        df_by_county = filtered_df[filtered_df['CountyName'] == i]
+        traces.append(go.Bar(
+            x = df_by_county['Year'],
+            y = df_by_county['Estimate'],
+            name = i
+            ))
 
     return {
         'data': traces,
@@ -99,7 +102,7 @@ def update_county_graph(attribute, countyid):
                 barmode='stack',
                 xaxis={'title': 'Year', 'type': 'category', 'categoryorder':'array', 'categoryarray': list(range(2000,2020))},
                 yaxis={'title': ''},
-                font=dict(family='Lato', color='#7f7f7f'), 
+                font=dict(family='Segoe UI', color='#7f7f7f'), 
                 showlegend=True
                 )
         }

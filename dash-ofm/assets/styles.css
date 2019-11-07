@@ -1,6 +1,11 @@
 * {
   box-sizing: border-box;
 }
+.display-head {
+  font-size: 3.5rem;
+  font-weight: 300;
+  line-height: 1.2;
+}
 div.content-box {
   display: flex;
   margin-top: 2rem;
@@ -10,26 +15,34 @@ aside {
   display: inline-block;
   float: left;
   width: 20%;
-
+  padding-left: 1rem;
 }
 aside section {
-  margin-left: 2rem;
   padding-left: 1rem;
   padding-top: .5rem;
+}
+.form-check input {
+  margin-right: .2rem;
+}
+.form-check label {
+  font-size: 1rem;
 }
 .selector {
   display: flex;
   flex-direction: column;
-  /* padding-left: 2rem; */
-  margin-left: 2rem;
   margin-top: .25rem;
 }
 main {
   width: 80%;
-  /* border-style: solid; */
+  margin-left: 2rem;
+  margin-right: 2rem;
 }
 main::after {
   content: "";
   clear: both;
   display: table;
 }
+/* label > .label-body {
+  display: inline-block;
+  margin-left: .5rem;
+  font-weight: normal; } */
