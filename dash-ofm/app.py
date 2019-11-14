@@ -27,11 +27,22 @@ def query_tblOfmSaep():
     df['CountyName'] = df['CountyID'].map(cnty_code_dict)
     return(df)
 
-#def create_growth_tblOfmSaep(table):
-#    table = table.sort_values(by='Year')
+def create_growth_tblOfmSaep(countytable):
+    df_growth = countytable.sort_values(by=['CountyName', 'AttributeDesc','Year'])
+    df_growth['delta'] = df_growth.groupby(['CountyName', 'AttributeDesc']).transform(lambda x:x.diff())
+    df_growth = df_growth.reset_index(drop=True)
+    years = list((range(2000, 2020)))
+    years = [str(x) for x in years]
+    years_combo = [i + '-' + j for i, j in zip(years[:-1], years[1:])]
+    label_dict = dict(zip(years[1:], years_combo))
+    df_growth['label'] = df_growth['Year'].map(label_dict)
+    df_growth = df_growth.loc[~df_growth['delta'].isna()]
+    return(df_growth)
+
 
 df = query_tblOfmSaep()
-#df.sort_values(by='Year')
+df_growth = create_growth_tblOfmSaep(df)
+df_growth_label = df_growth['label'].unique()
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LITERA])
 
@@ -59,7 +70,7 @@ cnty_checklist = dbc.FormGroup(
                  {'label':'Pierce', 'value':'053'},
                  {'label':'Snohomish', 'value':'061'}
              ],
-            value=['033', '035', '053', '061'],
+            value=['033'],
             className = 'selector'
         )
     ] 
@@ -89,7 +100,7 @@ body = dbc.Container(
         dbc.Row(
             [
                  dbc.Col(className="card border-secondary mb-3", children=[dbc.Form([cnty_checklist, est_type_radioitem])], width={"size":2}),
-                 dbc.Col(dcc.Graph(id='county-graph'), width=10)
+                 dbc.Col(children=[dcc.Graph(id='county-graph'), dcc.Graph(id='county-growth-graph')], width=10)
             ]
          )
     ],
@@ -122,7 +133,35 @@ def update_county_graph(attribute, countyids):
         'layout':go.Layout(
                 barmode='stack',
                 xaxis={'title': 'Year', 'type': 'category', 'categoryorder':'array', 'categoryarray': list(range(2000,2020))},
-                yaxis={'title': ''},
+                yaxis={'title': 'Estimate'},
+                font=dict(family='Segoe UI', color='#7f7f7f'), 
+                showlegend=True
+                )
+        }
+
+@app.callback(
+       Output(component_id='county-growth-graph', component_property='figure'),
+       [Input(component_id='estimate-type-radioitem', component_property='value'),
+        Input(component_id='county-id-checklist', component_property='value')
+       ]
+       )
+def update_county_graph(attribute, countyids):
+    filtered_df = df_growth[(df_growth.AttributeDesc == attribute) & (df_growth['CountyID'].isin(countyids))]
+    traces = []
+    for i in df['CountyName'].unique():
+        df_by_county = filtered_df[filtered_df['CountyName'] == i]
+        traces.append(go.Bar(
+            x = df_by_county['label'],
+            y = df_by_county['delta'],
+            name = i
+            ))
+
+    return {
+        'data': traces,
+        'layout':go.Layout(
+                barmode='stack',
+                xaxis={'title': 'Year', 'type': 'category', 'categoryorder':'array', 'categoryarray': df_growth_label},
+                yaxis={'title': 'Growth'},
                 font=dict(family='Segoe UI', color='#7f7f7f'), 
                 showlegend=True
                 )
