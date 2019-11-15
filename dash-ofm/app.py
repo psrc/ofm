@@ -100,11 +100,16 @@ body = dbc.Container(
         dbc.Row(
             [
                  dbc.Col(className="pretty-container", children=[dbc.Form([cnty_checklist, est_type_radioitem])], width=2),
-                 dbc.Col(children=[dcc.Graph(id='county-graph'), dcc.Graph(id='county-growth-graph')], width=10)
-            ]
-         )
+                 dbc.Col(children=[
+                     html.Div(dcc.Graph(id='county-graph'), className="pretty-container-graph"), 
+                     html.Div(dcc.Graph(id='county-growth-graph'), className="pretty-container-graph")
+                              ], 
+                         width=10)
+            ],
+         className="body")
     ],
-    className="body",
+    #className="body",
+    className="body-container",
     fluid=True
 )
 
@@ -135,7 +140,9 @@ def update_county_graph(attribute, countyids):
                 xaxis={'title': 'Year', 'type': 'category', 'categoryorder':'array', 'categoryarray': list(range(2000,2020))},
                 yaxis={'title': 'Estimate'},
                 font=dict(family='Segoe UI', color='#7f7f7f'), 
-                showlegend=True
+                showlegend=True,
+                #margin=dict(l=200,r=200,t=100,b=100),
+                autosize=True
                 )
         }
 
@@ -163,7 +170,8 @@ def update_county_growth_graph(attribute, countyids):
                 xaxis={'title': 'Year', 'type': 'category', 'categoryorder':'array', 'categoryarray': df_growth_label},
                 yaxis={'title': 'Growth'},
                 font=dict(family='Segoe UI', color='#7f7f7f'), 
-                showlegend=True
+                showlegend=True,
+                autosize=True
                 )
         }
 
