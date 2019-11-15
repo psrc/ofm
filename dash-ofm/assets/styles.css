@@ -5,13 +5,23 @@
   line-height: 1.2;
 }
 .body {
-  margin: 1rem;
+  max-width: 90%;
+  margin: auto;
 }
 .form-group {
   margin-left: 1rem;
-  margin-top: 1.5rem;
+  margin-top: .5rem;
 }
 .selector {
-  /* margin-top: .25rem; */
   margin-left: 1rem;
+}
+.pretty-container {
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  margin-bottom: auto;
+  margin-top: 10px;
+  padding-bottom: 15px;
+  padding-top: 15px;
+  position: relative;
+  box-shadow: 2px 2px 2px lightgrey;
 }

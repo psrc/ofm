@@ -29,20 +29,20 @@ def query_tblOfmSaep():
 
 def create_growth_tblOfmSaep(countytable):
     df_growth = countytable.sort_values(by=['CountyName', 'AttributeDesc','Year'])
-    df_growth['delta'] = df_growth.groupby(['CountyName', 'AttributeDesc']).transform(lambda x:x.diff())
+    df_growth['Delta'] = df_growth.groupby(['CountyName', 'AttributeDesc']).transform(lambda x:x.diff())
     df_growth = df_growth.reset_index(drop=True)
     years = list((range(2000, 2020)))
     years = [str(x) for x in years]
     years_combo = [i + '-' + j for i, j in zip(years[:-1], years[1:])]
     label_dict = dict(zip(years[1:], years_combo))
-    df_growth['label'] = df_growth['Year'].map(label_dict)
-    df_growth = df_growth.loc[~df_growth['delta'].isna()]
+    df_growth['Label'] = df_growth['Year'].map(label_dict)
+    df_growth = df_growth.loc[~df_growth['Delta'].isna()]
     return(df_growth)
 
 
 df = query_tblOfmSaep()
 df_growth = create_growth_tblOfmSaep(df)
-df_growth_label = df_growth['label'].unique()
+df_growth_label = df_growth['Label'].unique()
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LITERA])
 
@@ -99,7 +99,7 @@ body = dbc.Container(
  
         dbc.Row(
             [
-                 dbc.Col(className="card border-secondary mb-3", children=[dbc.Form([cnty_checklist, est_type_radioitem])], width={"size":2}),
+                 dbc.Col(className="pretty-container", children=[dbc.Form([cnty_checklist, est_type_radioitem])], width=2),
                  dbc.Col(children=[dcc.Graph(id='county-graph'), dcc.Graph(id='county-growth-graph')], width=10)
             ]
          )
@@ -145,14 +145,14 @@ def update_county_graph(attribute, countyids):
         Input(component_id='county-id-checklist', component_property='value')
        ]
        )
-def update_county_graph(attribute, countyids):
+def update_county_growth_graph(attribute, countyids):
     filtered_df = df_growth[(df_growth.AttributeDesc == attribute) & (df_growth['CountyID'].isin(countyids))]
     traces = []
     for i in df['CountyName'].unique():
         df_by_county = filtered_df[filtered_df['CountyName'] == i]
         traces.append(go.Bar(
-            x = df_by_county['label'],
-            y = df_by_county['delta'],
+            x = df_by_county['Label'],
+            y = df_by_county['Delta'],
             name = i
             ))
 
