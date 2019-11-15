@@ -39,10 +39,33 @@ def create_growth_tblOfmSaep(countytable):
     df_growth = df_growth.loc[~df_growth['Delta'].isna()]
     return(df_growth)
 
+def create_county_bar_traces(table, xcol, ycol, attribute, countyids):
+    filtered_df = table[(table.AttributeDesc == attribute) & (table['CountyID'].isin(countyids))]
+    traces = []
+    for i in table['CountyName'].unique():
+        df_by_county = filtered_df[filtered_df['CountyName'] == i]
+        traces.append(go.Bar(
+            x = df_by_county[xcol],
+            y = df_by_county[ycol],
+            name = i
+            ))
+    return(traces)
+
+def create_bar_layout(mode, xtitle, catarray, ytitle):
+    layout = go.Layout(
+        barmode=mode,
+        xaxis={'title': xtitle, 'type': 'category', 'categoryorder':'array', 'categoryarray': catarray},
+        yaxis={'title': ytitle},
+        font=dict(family='Segoe UI', color='#7f7f7f'), 
+        showlegend=True,
+        autosize=True
+        )
+    return(layout)
 
 df = query_tblOfmSaep()
 df_growth = create_growth_tblOfmSaep(df)
 df_growth_label = df_growth['Label'].unique()
+
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LITERA])
 
@@ -115,65 +138,20 @@ body = dbc.Container(
 
 app.layout = html.Div([banner, body])
 
-
 @app.callback(
-       Output(component_id='county-graph', component_property='figure'),
+       [Output(component_id='county-graph', component_property='figure'),
+        Output(component_id='county-growth-graph', component_property='figure')
+        ],
        [Input(component_id='estimate-type-radioitem', component_property='value'),
         Input(component_id='county-id-checklist', component_property='value')
        ]
        )
-def update_county_graph(attribute, countyids):
-    filtered_df = df[(df.AttributeDesc == attribute) & (df['CountyID'].isin(countyids))]
-    traces = []
-    for i in df['CountyName'].unique():
-        df_by_county = filtered_df[filtered_df['CountyName'] == i]
-        traces.append(go.Bar(
-            x = df_by_county['Year'],
-            y = df_by_county['Estimate'],
-            name = i
-            ))
-
-    return {
-        'data': traces,
-        'layout':go.Layout(
-                barmode='stack',
-                xaxis={'title': 'Year', 'type': 'category', 'categoryorder':'array', 'categoryarray': list(range(2000,2020))},
-                yaxis={'title': 'Estimate'},
-                font=dict(family='Segoe UI', color='#7f7f7f'), 
-                showlegend=True,
-                #margin=dict(l=200,r=200,t=100,b=100),
-                autosize=True
-                )
-        }
-
-@app.callback(
-       Output(component_id='county-growth-graph', component_property='figure'),
-       [Input(component_id='estimate-type-radioitem', component_property='value'),
-        Input(component_id='county-id-checklist', component_property='value')
-       ]
-       )
-def update_county_growth_graph(attribute, countyids):
-    filtered_df = df_growth[(df_growth.AttributeDesc == attribute) & (df_growth['CountyID'].isin(countyids))]
-    traces = []
-    for i in df['CountyName'].unique():
-        df_by_county = filtered_df[filtered_df['CountyName'] == i]
-        traces.append(go.Bar(
-            x = df_by_county['Label'],
-            y = df_by_county['Delta'],
-            name = i
-            ))
-
-    return {
-        'data': traces,
-        'layout':go.Layout(
-                barmode='stack',
-                xaxis={'title': 'Year', 'type': 'category', 'categoryorder':'array', 'categoryarray': df_growth_label},
-                yaxis={'title': 'Growth'},
-                font=dict(family='Segoe UI', color='#7f7f7f'), 
-                showlegend=True,
-                autosize=True
-                )
-        }
+def update_graphs(attribute, countyids):
+    data1 = create_county_bar_traces(df, 'Year', 'Estimate', attribute, countyids)
+    data2 = create_county_bar_traces(df_growth, 'Label', 'Delta', attribute, countyids)
+    layout1 = create_bar_layout('stack', 'Year', list(range(2000,2020)), 'Estimate')
+    layout2 = create_bar_layout('stack', 'Year', df_growth_label, 'Growth')
+    return {'data': data1, 'layout': layout1}, {'data': data2, 'layout': layout2}
 
 if __name__ == '__main__':
     app.run_server(debug=True)
