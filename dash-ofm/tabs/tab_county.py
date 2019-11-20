@@ -67,7 +67,7 @@ body = dbc.Container(
 )
 
 #app.layout = html.Div([banner, body])
-tab_county_layout = body
+tab_layout = body
 
 @app.callback(
        [Output(component_id='county-graph', component_property='figure'),

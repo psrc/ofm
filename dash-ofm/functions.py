@@ -11,6 +11,7 @@ import pyodbc
 import numpy as np
 
 cnty_code_dict = {'033':'King', '035':'Kitsap', '053':'Pierce', '061':'Snohomish'}
+geog_color_dict = {'King':'#933890', 'Kitsap': '#f05a28', 'Pierce': '#9ac75c', 'Snohomish': '#45a8a3', 'Region': '#76787a'} #purple, orange,  green,teal, grey
 
 def sqlconn(dbname):
     # create Elmer connection
@@ -27,9 +28,14 @@ def query_tblOfmSaep():
     df['CountyName'] = df['CountyID'].map(cnty_code_dict)
     return(df)
 
-def create_growth_tblOfmSaep(countytable):
-    df_growth = countytable.sort_values(by=['CountyName', 'AttributeDesc','Year'])
-    df_growth['Delta'] = df_growth.groupby(['CountyName', 'AttributeDesc']).transform(lambda x:x.diff())
+def create_growth_tblOfmSaep(geog, table):
+    # calculate and label deltas. Table is either county level or regional level
+    if geog == 'county':
+        df_growth = table.sort_values(by=['CountyName', 'AttributeDesc','Year'])
+        df_growth['Delta'] = df_growth.groupby(['CountyName', 'AttributeDesc']).transform(lambda x:x.diff())
+    elif geog == 'region':
+        df_growth = table.sort_values(by=['AttributeDesc','Year'])
+        df_growth['Delta'] = df_growth.groupby(['AttributeDesc']).transform(lambda x:x.diff())  
     df_growth = df_growth.reset_index(drop=True)
     years = list((range(2000, 2020)))
     years = [str(x) for x in years]
@@ -47,8 +53,20 @@ def create_county_bar_traces(table, xcol, ycol, attribute, countyids):
         traces.append(go.Bar(
             x = df_by_county[xcol],
             y = df_by_county[ycol],
-            name = i
+            name = i,
+            marker = {'color':geog_color_dict[i]}
             ))
+    return(traces)
+
+def create_region_bar_traces(table, xcol, ycol, attribute):
+    filtered_df = table[table.AttributeDesc == attribute]
+    traces = []
+    traces.append(go.Bar(
+        x = filtered_df[xcol],
+        y = filtered_df[ycol],
+        name = 'Region',
+        marker = {'color':geog_color_dict['Region']}
+        ))
     return(traces)
 
 def create_bar_layout(mode, xtitle, catarray, ytitle):
@@ -62,6 +80,13 @@ def create_bar_layout(mode, xtitle, catarray, ytitle):
         )
     return(layout)
 
+# county tables
 df = query_tblOfmSaep()
-df_growth = create_growth_tblOfmSaep(df)
+#df_growth = create_growth_tblOfmSaep(df)
+df_growth = create_growth_tblOfmSaep('county', df)
 df_growth_label = df_growth['Label'].unique()
+
+# regional tables
+df_region = df.groupby(['Year', 'AttributeDesc'])['Estimate'].sum().reset_index()
+df_growth_region = create_growth_tblOfmSaep('region', df_region)
+

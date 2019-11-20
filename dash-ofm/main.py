@@ -12,6 +12,7 @@ import numpy as np
 from functions import *
 from app import app
 from tabs import tab_county
+from tabs import tab_region
 
 
 banner = dbc.Jumbotron(
@@ -44,9 +45,9 @@ app.layout = html.Div([banner, tabs, content])
               [Input('tabs', 'active_tab')])
 def render_content(tab):
     if tab == 'tab-county':
-        return tab_county.tab_county_layout
-    #elif tab == 'tab-region':
-    #    return tab_region.tab_2_layout
+        return tab_county.tab_layout
+    elif tab == 'tab-region':
+        return tab_region.region_tab_layout
 
 if __name__ == '__main__':
     app.run_server(debug=True)
