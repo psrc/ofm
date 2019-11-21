@@ -11,7 +11,12 @@ import pyodbc
 import numpy as np
 
 cnty_code_dict = {'033':'King', '035':'Kitsap', '053':'Pierce', '061':'Snohomish'}
-geog_color_dict = {'King':'#933890', 'Kitsap': '#f05a28', 'Pierce': '#9ac75c', 'Snohomish': '#45a8a3', 'Region': '#76787a'} #purple, orange,  green,teal, grey
+geog_color_dict = {'King':'#933890', #purple
+                   'Kitsap': '#f05a28', #orange
+                   'Pierce': '#9ac75c', #green
+                   'Snohomish': '#45a8a3', #teal
+                   'Region': '#76787a' #grey
+                   }
 
 def sqlconn(dbname):
     # create Elmer connection
@@ -45,6 +50,31 @@ def create_growth_tblOfmSaep(geog, table):
     df_growth = df_growth.loc[~df_growth['Delta'].isna()]
     return(df_growth)
 
+def create_region_pie(table, labelscol, valuescol, attribute, year):
+    filtered_df = table[(table.AttributeDesc == attribute) & (table['Year'].isin(year))]
+     #create array
+    colors = np.array(['']*len(filtered_df[labelscol]), dtype = object)
+    for i in np.unique(filtered_df[labelscol]):
+        colors[np.where(filtered_df[labelscol] == i)] = geog_color_dict[str(i)]
+
+    fig = [go.Pie(
+        labels=filtered_df[labelscol],
+        values=filtered_df[valuescol],
+        marker={'colors':colors, 
+                'line':{'color':'#ffffff', 'width':2}}
+        
+        )]
+    return(fig)
+
+def create_pie_layout(attribute):
+    layout = go.Layout(
+        title = 'Percent of ' + attribute + ' in Region',
+        font=dict(family='Segoe UI', color='#7f7f7f'), 
+        showlegend=True,
+        autosize=True
+        )
+    return(layout)
+
 def create_county_bar_traces(table, xcol, ycol, attribute, countyids):
     filtered_df = table[(table.AttributeDesc == attribute) & (table['CountyID'].isin(countyids))]
     traces = []
@@ -69,9 +99,10 @@ def create_region_bar_traces(table, xcol, ycol, attribute):
         ))
     return(traces)
 
-def create_bar_layout(mode, xtitle, catarray, ytitle):
+def create_bar_layout(mode, xtitle, catarray, ytitle, charttitle):
     layout = go.Layout(
         barmode=mode,
+        title = charttitle,
         xaxis={'title': xtitle, 'type': 'category', 'categoryorder':'array', 'categoryarray': catarray},
         yaxis={'title': ytitle},
         font=dict(family='Segoe UI', color='#7f7f7f'), 

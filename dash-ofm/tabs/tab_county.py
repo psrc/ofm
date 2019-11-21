@@ -78,8 +78,10 @@ tab_layout = body
        ]
        )
 def update_graphs(attribute, countyids):
+    chart_title1 = "Annual Estimates for " + attribute
+    chart_title2 = "Annual Change for " + attribute
     data1 = create_county_bar_traces(df, 'Year', 'Estimate', attribute, countyids)
     data2 = create_county_bar_traces(df_growth, 'Label', 'Delta', attribute, countyids)
-    layout1 = create_bar_layout('stack', 'Year', list(range(2000,2020)), 'Estimate')
-    layout2 = create_bar_layout('stack', 'Year', df_growth_label, 'Growth')
+    layout1 = create_bar_layout('stack', 'Year', list(range(2000,2020)), 'Estimate', chart_title1)
+    layout2 = create_bar_layout('stack', 'Year', df_growth_label, 'Growth', chart_title2)
     return {'data': data1, 'layout': layout1}, {'data': data2, 'layout': layout2}
