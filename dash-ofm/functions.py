@@ -61,17 +61,21 @@ def create_region_pie(table, labelscol, valuescol, attribute, year):
         labels=filtered_df[labelscol],
         values=filtered_df[valuescol],
         marker={'colors':colors, 
-                'line':{'color':'#ffffff', 'width':2}}
-        
+                'line':{'color':'#ffffff', 'width':2}},
+        domain={'x':[0,1],'y':[0.33,1]}
         )]
     return(fig)
 
 def create_pie_layout(attribute):
     layout = go.Layout(
-        title = 'Percent of ' + attribute + ' in Region',
+        title = dict(text = 'Percent of ' + attribute + ' in Region'),
         font=dict(family='Segoe UI', color='#7f7f7f'), 
         showlegend=True,
-        autosize=True
+        autosize=True,
+        margin=dict(b=0),
+        #legend=dict(x=.85,y=1.08),
+        height=420,
+        legend=dict(orientation='h', yanchor='bottom', xanchor='center', x=.5, y=.15)
         )
     return(layout)
 

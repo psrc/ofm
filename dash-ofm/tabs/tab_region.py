@@ -11,6 +11,7 @@ import pyodbc
 import numpy as np
 from functions import *
 from app import app
+import ipdb
 
 region_est_type_radioitem = dbc.FormGroup(
     [
@@ -36,16 +37,32 @@ region_body = dbc.Container(
         dbc.Row(
             [
                  dbc.Col(className="pretty-container", children=[dbc.Form([region_est_type_radioitem])], width=2),
-                 #dbc.Col(children=[
-                 #    html.Div(dcc.Graph(id='region-graph'), className="pretty-container-graph"), 
-                 #    html.Div(dcc.Graph(id='region-growth-graph'), className="pretty-container-graph")
-                 #             ], 
-                 #        width=10)
                  dbc.Col(
                      [
                      dbc.Row(children=[
                          dbc.Col(html.Div(dcc.Graph(id='region-graph'), className="pretty-container-graph"), width=8),
-                         dbc.Col(html.Div(dcc.Graph(id='region-pie'), className="pretty-container-graph"), width=4)
+                         dbc.Col(
+                             html.Div(children=[
+                                 dcc.Graph(id='region-pie'), 
+                                 #html.Div(
+                                 html.Div(children=[
+                                     #html.Label('Select year'),
+                                     dcc.Dropdown(
+                                         id='region-pie-year-dropdown',
+                                        options=[{'label':str(i), 'value':str(i)} for i in range(2000,2020)],
+                                        value = '2019',
+                                        className = 'dropdown-control'#,
+                                        #className = 'form-control'
+                                     )],
+                                 className = 'dropdown-container'#dash-boostrap'
+                                 )#,
+                                 #className = 'dash-boostrap'
+                                 #)
+                                
+                             ],
+                             className="pretty-container-graph"
+                             ),
+                            width=4)
                          ]),
                      html.Div(dcc.Graph(id='region-growth-graph'), className="pretty-container-graph")
                      ],
@@ -65,16 +82,17 @@ region_tab_layout = region_body
         Output(component_id='region-growth-graph', component_property='figure'),
         Output(component_id='region-pie', component_property='figure')
         ],
-       [Input(component_id='region-estimate-type-radioitem', component_property='value')]
+       [Input(component_id='region-estimate-type-radioitem', component_property='value'),
+        Input(component_id='region-pie-year-dropdown', component_property='value')]
        )
-def update_region_graphs(attribute):
+def update_region_graphs(attribute, year):
     chart_title1 = "Regional Annual Estimates for " + attribute
     chart_title2 = "Regional Annual Change for " + attribute
     data1 = create_region_bar_traces(df_region, 'Year', 'Estimate', attribute)
     data2 = create_region_bar_traces(df_growth_region, 'Label', 'Delta', attribute)
     layout1 = create_bar_layout('stack', 'Year', list(range(2000,2020)), 'Estimate', chart_title1)
     layout2 = create_bar_layout('stack', 'Year', df_growth_label, 'Growth', chart_title2)
-    data3 = create_region_pie(df, 'CountyName', 'Estimate', attribute, ['2019'])
+    data3 = create_region_pie(df, 'CountyName', 'Estimate', attribute, [year])
     layout3 = create_pie_layout(attribute)
     return {'data': data1, 'layout': layout1}, {'data': data2, 'layout': layout2}, {'data': data3, 'layout':layout3}
 

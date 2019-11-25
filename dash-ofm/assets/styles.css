@@ -62,3 +62,17 @@ Legend {
 #tabs-content {
     margin-top: 1rem;
 }
+.dropdown-control {
+    margin: auto;
+    font-size: .7vw;
+    width: 80%;
+}
+.dropdown-container {
+    /*display: flex;*/
+    /*flex-direction: row;*/
+    /*justify-content: center;*/
+    margin: auto;
+}
+.dropdown-container label {
+    margin: auto;
+}
