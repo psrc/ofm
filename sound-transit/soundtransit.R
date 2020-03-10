@@ -15,9 +15,9 @@ stdf <- ofm %>%
 
 # edit
 st.juris <- stdf %>%
-  select(COUNTYFP10, Juris2018) %>%
+  select(COUNTYFP10, Juris2019) %>%
   distinct() %>%
-  arrange(COUNTYFP10, Juris2018)
+  arrange(COUNTYFP10, Juris2019)
 
 stdf.pop <- stdf %>%
   select_(.dots = yrs.cols)
