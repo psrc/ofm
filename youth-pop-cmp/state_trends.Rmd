@@ -1,0 +1,145 @@
+---
+title: "Youth Population"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(openxlsx)
+library(data.table)
+library(here)
+library(stringr)
+library(ggplot2)
+library(patchwork)
+
+data.dir <- here('youth-pop-cmp', 'data')
+ofm.state.proj <- "stfc_population_by_age_and_sex.xlsx"
+ofm.state.proj.year <- 2020
+```
+
+# OFM State Projections
+
+State projections offer projections for individual ages (0-100) by individual year (1970-2040)
+
+- [https://ofm.wa.gov/washington-data-research/population-demographics/population-forecasts-and-projections/state-population-forecast](https://ofm.wa.gov/washington-data-research/population-demographics/population-forecasts-and-projections/state-population-forecast)
+
+## Youth (5-17) Projections
+
+```{r}
+# Read state projections
+osp <- read.xlsx(file.path(data.dir, ofm.state.proj), sheet = 'Single Year', startRow = 9)
+setDT(osp)
+osp.m <- melt(osp, id = "Age")
+osp.m[, c('Sex', 'Year') := tstrsplit(variable, ".", fixed = TRUE)]
+
+df <- osp.m[Sex == 'Total' & Age %chin% as.character(5:19), 
+            ][, Year := as.numeric(Year)
+              ][, age_group := fcase(Age %between% c(5, 9), "5-9",
+                                   Age %between% c(10, 14), "10-14",
+                                   Age %between% c(15, 17), "15-17",
+                                   Age %between% c(18, 19), "18-19")
+                ][, age_group := factor(age_group, levels = c("5-9", "10-14", "15-17", "18-19"), labels = c("5-9", "10-14", "15-17", "18-19"))]
+
+df.youth <- df[Age %chin% as.character(5:17), .(total_youth = sum(value)), by = Year
+               ][, total_growth := shift(total_youth, type = "lead") - total_youth
+                   ][, share_growth := total_growth/total_youth
+                     ]
+
+
+
+```
+
+```{r}
+year.inter <- seq(min(df.youth$Year), max(df.youth$Year), by = 5)
+
+plot.actual <- ggplot(df.youth, aes(x = Year, y = total_youth)) +
+  geom_line() +
+  geom_point(data = df.youth[Year %in% year.inter, ]) +
+  scale_y_continuous(labels = scales::label_comma()) +
+  labs(y = 'Total',
+       caption = paste('OFM State Population Forecast', ofm.state.proj.year),
+       title = 'Total Youth Population Projections',
+       subtitle = 'Persons from ages 5-17')
+
+```
+
+```{r}
+
+df.youth.bar <- df.youth[1:(nrow(df.youth)-1), ]
+
+growth_period <- c(paste0(df.youth$Year[1:length(df.youth$Year)-1], "-", str_extract(df.youth$Year[2:length(df.youth$Year)], "\\d{2}$")))
+
+growth_breaks <- c(df.youth.bar$Year[seq(1, length(df.youth.bar$Year), by = 5)], max(df.youth.bar$Year))
+
+growth_labels <- c(growth_period[seq(1, length(df.youth.bar$Year), by = 5)], growth_period[length(growth_period)])
+
+plot.growth <- ggplot(df.youth.bar, aes(x = as.factor(Year), y = share_growth)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::label_percent()) +
+  scale_x_discrete(breaks = growth_breaks, labels = growth_labels) +
+  labs(y = 'Growth',
+       x = 'Year',
+       caption = paste('OFM State Population Forecast', ofm.state.proj.year),
+       title = 'Growth Projections of Youth Population',
+       subtitle = 'Persons from ages 5-17') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.1),
+        axis.ticks.x = element_blank())
+```
+
+
+```{r, fig.width=10}
+plot.actual
+```
+```{r, fig.width=10}
+plot.growth
+```
+## Projection by Youth Age Groups
+
+```{r}
+df.group <- df[, .(total = sum(value)), by = .(Year, age_group)]
+
+setorder(df.group, age_group, Year)
+
+df.group[, total_growth := shift(total, type = "lead") - total, by = age_group
+                   ][, share_growth := total_growth/total, by = age_group
+                     ]
+```
+
+```{r, fig.width=10}
+ggplot(df.group, aes(x = Year, y = total, color = age_group)) +
+  geom_line() +
+  geom_point(data = df.group[Year %in% year.inter, ]) +
+  scale_y_continuous(labels = scales::label_comma()) +
+  labs(y = 'Total',
+       color = 'Age',
+       caption = paste('OFM State Population Forecast', ofm.state.proj.year),
+       title = 'Total Youth Population Projections by Age Group',
+       subtitle = 'Persons from ages 5-19')
+
+```
+```{r}
+df.group.bar <- df.group[Year != max(Year)]
+
+```
+
+```{r, fig.width=12}
+ggplot(df.group.bar, aes(x = as.factor(Year), y = share_growth, fill = age_group)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::label_percent()) +
+  scale_x_discrete(breaks = growth_breaks, labels = growth_labels) +
+  labs(y = 'Growth',
+       x = 'Year',
+       caption = paste('OFM State Population Forecast', ofm.state.proj.year),
+       title = 'Growth Projections of Youth Population by Age Group',
+       subtitle = 'Persons from ages 5-19') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.1),
+        axis.ticks.x = element_blank(),
+        legend.position = "none") +
+  facet_wrap(vars(age_group))
+```
+
+

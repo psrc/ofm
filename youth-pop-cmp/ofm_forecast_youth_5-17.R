@@ -149,9 +149,9 @@ writeData(wb, sheet = "County Region All Cohorts", x = alldt, colNames = TRUE)
 print("exported County/Region All cohorts")
 
 # append raw region to workbook
-append.worksheet(region, wb, "OFM 2017 proj for CPS")
+append.worksheet(region, wb, "source OFM 2017 proj for CPS")
 print("exported regional OFM projections")
 
 # append censusdt.select to workbook
-append.worksheet(osp.dt1, wb, "OFM 2020 State proj")
+append.worksheet(osp.dt, wb, "source OFM 2020 State proj")
 print("exported OFM State projections for youth")
