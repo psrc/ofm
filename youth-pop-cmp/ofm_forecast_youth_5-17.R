@@ -27,10 +27,14 @@ out.filename <- paste0("pop_projections_", Sys.Date(),".xlsx")
 ofm.state.proj <- "stfc_population_by_age_and_sex.xlsx"
 ofm.file <- "gma_2017_age_sex_med_2050.xlsx"
 
-gma.years <- c(2030, 2050)
-state.years <- c(2030, 2040)
+gma.years <- c(2010, 2015, 2020, 2025, 2030, 2035, 2040, 2045, 2050)
+state.years <- c(2010, 2015, 2020, 2025, 2030, 2035, 2040, 2040, 2040)
 
-look.up <- data.table(gma = paste0("Total_", gma.years), state = paste0("Total_", state.years), id = 1:length(gma.years))
+look.up <- data.table(gma = paste0("Total_", gma.years), 
+                      state = paste0("Total_", state.years))
+
+# unique id for each unique year
+look.up[, id := .GRP, by = state]
 
 
 # state forecast ----------------------------------------------------------
@@ -48,6 +52,9 @@ state.age <- c(seq(15,19))
 
 osp <- osp[Age %in% state.age, ..state.cols]
 colnames(osp) <- str_replace_all(colnames(osp), "\\.", "_")
+
+# inspect colnames, remove duplicate column
+osp <- osp[, .SD, .SDcols = unique(names(osp))]
 
 osp.dt <- dcast(melt(osp, id.vars = 'Age'), variable ~ Age)
 setnames(osp.dt, colnames(osp.dt), c("year", paste0("pop_", 15:19)))
@@ -83,8 +90,7 @@ region <- region[, lapply(.SD, as.numeric), .SDcols = str_subset(colnames(region
 
 # isolate only 15-19 cohort
 ry.m <- melt(region, id.vars = c("Age", "County"), measure.vars = str_subset(colnames(region), "^Total"))
-ry.m.select <- ry.m[Age == "15-19" & variable %in% paste("Total", gma.years, sep = "_"),
-                    ]
+ry.m.select <- ry.m[Age == "15-19" & variable %in% paste("Total", gma.years, sep = "_"),]
 
 ## join ----
 

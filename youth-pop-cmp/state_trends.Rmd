@@ -47,7 +47,7 @@ df <- osp.m[Sex == 'Total' & Age %chin% as.character(5:19),
 df.youth <- df[Age %chin% as.character(5:17), .(total_youth = sum(value)), by = Year
                ][, total_growth := shift(total_youth, type = "lead") - total_youth
                    ][, share_growth := total_growth/total_youth
-                     ]
+                     ][, jurisdiction := 'Washington State']
 
 
 
@@ -56,14 +56,15 @@ df.youth <- df[Age %chin% as.character(5:17), .(total_youth = sum(value)), by = 
 ```{r}
 year.inter <- seq(min(df.youth$Year), max(df.youth$Year), by = 5)
 
-plot.actual <- ggplot(df.youth, aes(x = Year, y = total_youth)) +
+plot.actual <- ggplot(df.youth, aes(x = Year, y = total_youth, color = jurisdiction)) +
   geom_line() +
   geom_point(data = df.youth[Year %in% year.inter, ]) +
   scale_y_continuous(labels = scales::label_comma()) +
   labs(y = 'Total',
        caption = paste('OFM State Population Forecast', ofm.state.proj.year),
        title = 'Total Youth Population Projections',
-       subtitle = 'Persons from ages 5-17')
+       subtitle = 'Persons ages 5-17 in Washington State') +
+  theme(legend.title = element_blank())
 
 ```
 
@@ -77,7 +78,7 @@ growth_breaks <- c(df.youth.bar$Year[seq(1, length(df.youth.bar$Year), by = 5)],
 
 growth_labels <- c(growth_period[seq(1, length(df.youth.bar$Year), by = 5)], growth_period[length(growth_period)])
 
-plot.growth <- ggplot(df.youth.bar, aes(x = as.factor(Year), y = share_growth)) +
+plot.growth <- ggplot(df.youth.bar, aes(x = as.factor(Year), y = share_growth, fill = jurisdiction)) +
   geom_col() +
   scale_y_continuous(labels = scales::label_percent()) +
   scale_x_discrete(breaks = growth_breaks, labels = growth_labels) +
@@ -85,9 +86,10 @@ plot.growth <- ggplot(df.youth.bar, aes(x = as.factor(Year), y = share_growth)) 
        x = 'Year',
        caption = paste('OFM State Population Forecast', ofm.state.proj.year),
        title = 'Growth Projections of Youth Population',
-       subtitle = 'Persons from ages 5-17') +
+       subtitle = 'Persons ages 5-17 in Washington State') +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.1),
-        axis.ticks.x = element_blank())
+        axis.ticks.x = element_blank(),
+        legend.title = element_blank())
 ```
 
 
@@ -118,7 +120,7 @@ ggplot(df.group, aes(x = Year, y = total, color = age_group)) +
        color = 'Age',
        caption = paste('OFM State Population Forecast', ofm.state.proj.year),
        title = 'Total Youth Population Projections by Age Group',
-       subtitle = 'Persons from ages 5-19')
+       subtitle = 'Persons ages 5-19 in Washington State')
 
 ```
 ```{r}
@@ -135,11 +137,33 @@ ggplot(df.group.bar, aes(x = as.factor(Year), y = share_growth, fill = age_group
        x = 'Year',
        caption = paste('OFM State Population Forecast', ofm.state.proj.year),
        title = 'Growth Projections of Youth Population by Age Group',
-       subtitle = 'Persons from ages 5-19') +
+       subtitle = 'Persons ages 5-19 in Washington State') +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.1),
         axis.ticks.x = element_blank(),
         legend.position = "none") +
   facet_wrap(vars(age_group))
 ```
+# OFM GMA Youth Projections (5-17)
+
+```{r}
+gma.youth <- read.xlsx(here('youth-pop-cmp', 'results', 'pop_projections_2021-03-08.xlsx'))
+setDT(gma.youth)
+
+gma.m <- melt(gma.youth, id.vars = c('category', 'County'))
+gma.youth.cps <- gma.m[County == 'Central Puget Sound Region' & category == '5-17',
+                       ][, c('Sex', 'Year') := tstrsplit(variable, "_", fixed = TRUE)
+                         ][, Year := as.numeric(Year)]
+
+```
+
+```{r}
+plot.actual +
+  geom_line(data = gma.youth.cps, aes(x = Year, y = value, color = County)) +
+  geom_point(data = gma.youth.cps, aes(x = Year, y = value, color = County)) +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = c('blue', 'grey')) +
+  labs(subtitle = "Persons ages 5-17")
+```
+
 
 
