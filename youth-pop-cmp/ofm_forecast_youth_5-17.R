@@ -27,8 +27,8 @@ out.filename <- paste0("pop_projections_", Sys.Date(),".xlsx")
 ofm.state.proj <- "stfc_population_by_age_and_sex.xlsx"
 ofm.file <- "gma_2017_age_sex_med_2050.xlsx"
 
-gma.years <- c(2010, 2015, 2020, 2025, 2030, 2035, 2040, 2045, 2050)
-state.years <- c(2010, 2015, 2020, 2025, 2030, 2035, 2040, 2040, 2040)
+gma.years <- seq(2010, 2050, by = 5)
+state.years <- c(seq(2010, 2035, by = 5), rep(2040, 3))
 
 look.up <- data.table(gma = paste0("Total_", gma.years), 
                       state = paste0("Total_", state.years))
@@ -133,7 +133,9 @@ format.region.pop.dt2[!is.na(category),
                       .SDcols = str_subset(colnames(format.region.pop.dt2), "^Total"), 
                       by = County]
 
-# filter where category is not na and only forecast years
+## munge tables ----
+
+# filter where category is not NA
 dt0 <- format.region.pop.dt2[!is.na(category), 
                              ][, category := factor(category, levels = category.factor, labels = category.factor)]
 
@@ -154,10 +156,10 @@ addWorksheet(wb, "County Region All Cohorts")
 writeData(wb, sheet = "County Region All Cohorts", x = alldt, colNames = TRUE)
 print("exported County/Region All cohorts")
 
-# append raw region to workbook
+# append GMA forecast to workbook
 append.worksheet(region, wb, "source OFM 2017 proj for CPS")
 print("exported regional OFM projections")
 
-# append censusdt.select to workbook
+# append State forecast for Youth to workbook
 append.worksheet(osp.dt, wb, "source OFM 2020 State proj")
 print("exported OFM State projections for youth")
