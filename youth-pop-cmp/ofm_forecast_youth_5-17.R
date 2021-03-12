@@ -1,5 +1,5 @@
-# This script compiles OFM 201X population by age projections and computes an estimate of the 
-# 15-17 age cohort based on the share of persons age 15-17 in X
+# This script compiles OFM GMA 201X population by age projections and computes an estimate of the 
+# 15-17 age cohort based on the share of persons age 15-17 and 18-19 in X from the OFM State Projections
 
 library(openxlsx)
 library(data.table)
@@ -46,7 +46,7 @@ setDT(osp)
 
 state.yr.cols <- paste0("Total.", state.years)
 state.cols <- c("Age", state.yr.cols)
-state.age <- c(seq(15,19))
+state.age <- seq(15,19)
 
 ## filter state forecast ----
 
