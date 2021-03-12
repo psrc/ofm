@@ -1,4 +1,5 @@
 library(odbc)
+library(DBI)
 library(data.table)
 library(stringr)
 
@@ -17,7 +18,7 @@ FROM ofm.estimate_facts AS a
 WHERE a.estimate_year =", estimate.year, "AND a.publication_dim_id = 3;"
 )
 
-elmer_connection <- dbConnect(odbc::odbc(),
+elmer_connection <- dbConnect(odbc(),
                               driver = "SQL Server",
                               server = "AWS-PROD-SQL\\Sockeye",
                               database = "Elmer",
@@ -25,7 +26,7 @@ elmer_connection <- dbConnect(odbc::odbc(),
                               ) 
 
 # read in a queried table
-df <- dbGetQuery(elmer_connection, DBI::SQL(query))
+df <- dbGetQuery(elmer_connection, SQL(query))
 
 dbDisconnect(elmer_connection)
 
