@@ -11,7 +11,8 @@ out.dir <- "T:/2021March/Stefan"
 # latest & greatest vintage is publication_dim_id 3
 
 query <- paste(
-"SELECT a.publication_dim_id, c.publication_name, a.geography_dim_id, b.block_geoid, a.estimate_year, a.housing_units, a.occupied_housing_units, a.group_quarters_population, a.household_population
+"SELECT a.publication_dim_id, c.publication_name, a.geography_dim_id, b.block_geoid, a.estimate_year, 
+a.housing_units, a.occupied_housing_units, a.group_quarters_population, a.household_population
 FROM ofm.estimate_facts AS a 
     LEFT JOIN census.geography_dim AS b ON a.geography_dim_id = b.geography_dim_id
     JOIN ofm.publication_dim AS c ON a.publication_dim_id = c.publication_dim_id
