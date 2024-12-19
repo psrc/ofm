@@ -24,7 +24,8 @@ append.worksheet <- function(table, workbook, sheetName){
 data.dir <- here('youth-pop-cmp', 'data')
 out.filename <- paste0("pop_projections_", Sys.Date(),".xlsx")
 
-ofm.state.proj <- "stfc_population_by_age_and_sex.xlsx"
+ofm.state.proj <- "stfc_2020.xlsx"
+# ofm.state.proj <- "stfc_population_by_age_and_sex.xlsx"
 ofm.file <- "gma_2017_age_sex_med_2050.xlsx"
 
 gma.years <- seq(2010, 2050, by = 5)
