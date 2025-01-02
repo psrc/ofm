@@ -18,13 +18,16 @@ if(file.exists(file.path(base_dir, sub_dir)) == FALSE) {
 }
 
 url <- "https://ofm.wa.gov/sites/default/files/public/dataresearch/pop/smallarea/data/xlsx/saep_block20.zip"
-hu_url <- "https://ofm.wa.gov/sites/default/files/public/dataresearch/pop/april1/ofm_april1_housing.xlsx"
-pop_url <- "https://ofm.wa.gov/sites/default/files/public/dataresearch/pop/april1/ofm_april1_population_final.xlsx"  
+# hu_url <- "https://ofm.wa.gov/sites/default/files/public/dataresearch/pop/april1/ofm_april1_housing.xlsx"
+# pop_url <- "https://ofm.wa.gov/sites/default/files/public/dataresearch/pop/april1/ofm_april1_population_final.xlsx"  
 
 # Specify the file name and location where you want to save the file
 file_name <- basename(url)
 file_path <- file.path(base_dir, sub_dir)
 out_file_path <- file.path(base_dir, sub_dir, 'original')
+
+# getOption('timeout')
+# options(timeout=400)
 
 # download file
 download.file(url, file.path(out_file_path, file_name, sep = ""), mode = "wb")

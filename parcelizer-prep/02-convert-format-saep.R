@@ -12,11 +12,11 @@ library(tidyverse)
 base.dir <- "J:/OtherData/OFM/SAEP"
 dir <- "SAEP Extract_2024-10-16"
 data.dir <- file.path(dir, "original")
-filename <- "saep_block20.csv"
+filename <- "block20.csv"
 
 id.cols <- c("STATEFP", "COUNTYFP", "TRACTCE", "BLOCKCE", "GEOID20")
 counties <- c("33", "35", "53", "61")
-years <- c(as.character(2020:2024))
+years <- c(as.character(2010:2019))
 version <- 'September 17, 2024' # taken from OFM block metadata
 
 # functions ---------------------------------------------------------------
@@ -39,9 +39,24 @@ convert.file <- function(filename, inputfileformat, outputfileformat){
   
   # 2020-24 data format
   dt <- filter.for.psrc(df)
+  
+  # check for negative values ----
+  dt_id_colnames <- c(id.cols, "VERSION")
+  dtm <- melt.data.table(dt,
+                  id.vars = dt_id_colnames,
+                  measure.vars = setdiff(colnames(dt), dt_id_colnames))
+
+  View(dtm[value < 0])
+  dtm[value < 0, value := 0]
+
+  check <- dtm[value < 0]
+  
+  # unmelt ----
+  dt <- dcast.data.table(dtm, STATEFP + COUNTYFP+ TRACTCE + BLOCKCE + GEOID20 + VERSION ~ variable, value.var = "value")
  
   if (outputfileformat == "dbf") write.dbf(dt, file.path(base.dir, dir, "ofm_saep.dbf"))
-  if (outputfileformat == "rds") saveRDS(dt, file.path(base.dir, dir, "ofm_saep.rds"))
+  # if (outputfileformat == "rds") saveRDS(dt, file.path(base.dir, dir, "ofm_saep.rds"))
+  if (outputfileformat == "rds") saveRDS(dt, file.path(base.dir, dir, "ofm_saep_intercensal.rds"))
   if (outputfileformat == "csv") write.csv(dt, file.path(base.dir, dir, "ofm_saep.csv"), row.names = FALSE)
 }
 
@@ -96,6 +111,10 @@ qc.rds <- function(years) {
 
 
 convert.file(filename, inputfileformat = "csv", outputfileformat = "rds")
+
+# read intercensal dataset ----
+
+df <- readRDS(file.path(base.dir, dir, "ofm_saep_intercensal.rds"))
 
 # QC ----------------------------------------------------------------------
 

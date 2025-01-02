@@ -5,6 +5,10 @@ toc: true
 editor: visual
 ---
 
+**Occupied Housing Unit** (OHU) discrepancies were found at the county level between adjusted intercensal estimates 2010-19 and published county estimates (SAEP). Jump to "Compare Tables" section to see differences.
+
+Only minor differences are found between Total Population adjusted intercensal estimates and April 1 estimates. Jump to "Compare Tables" section to see differences.
+
 ```{r, warning=FALSE, include=FALSE}
 suppressMessages(library(tidyverse))
 library(openxlsx)
@@ -13,14 +17,27 @@ library(gt)
 
 ## OFM Adjusted Intercensal Estimates
 
-Negative values were detected in Occupied Housing Estimates records. The results below converted negative estimates to zero.
-
 ```{r, echo=FALSE}
 base_dir <- "J:/OtherData/OFM/SAEP"
 dir <- "SAEP Extract_2024-10-16"
 filename <- "ofm_saep_intercensal.rds"
 
 df <- readRDS(file.path(base_dir, dir, filename))
+
+df_long <- df |> 
+  pivot_longer(str_subset(colnames(df), "\\d{4}")) |> 
+  filter(value < 0)
+
+```
+
+In the adjusted dataset, negative values were replaced by zeros. Negative values are not detected in Occupied Housing Estimates records as seen in the output below. `r nrow(df_long)` records returned with estimates below 0.
+
+```{r, echo=FALSE}
+df_long
+```
+
+```{r, echo=FALSE}
+
 
 # aggregate by county
 df_co <- df |> 
@@ -197,7 +214,7 @@ adj_and_co_fmt |>
  group_by(attribute) |> 
  gt(rowname_col = "year") |> 
  fmt_number(columns = everything(),
-            decimals = 0,
+            decimals = 2,
             sep_mark = ",") |> 
  tab_style(
    style = cell_text(size = px(12)),
@@ -235,12 +252,49 @@ adj_and_co_fmt |>
     saep_adj_inter_Snohomish = "Adj",
     saep_co_est_Snohomish = "Pub",
     difference_Snohomish = "\U0394"
+  ) |> 
+    tab_style(
+    style = list(
+      cell_fill(color = "green")
+      ),
+    locations = cells_body(
+      columns = difference_King,
+      rows =  difference_King > 0
+    )
+  )|> 
+    tab_style(
+    style = list(
+      cell_fill(color = "green")
+      ),
+    locations = cells_body(
+      columns = difference_Kitsap,
+      rows =  difference_Kitsap > 0
+    )
+  )|> 
+    tab_style(
+    style = list(
+      cell_fill(color = "green")
+      ),
+    locations = cells_body(
+      columns = difference_Pierce,
+      rows =  difference_Pierce > 0
+    )
+  )|> 
+    tab_style(
+    style = list(
+      cell_fill(color = "green")
+      ),
+    locations = cells_body(
+      columns = difference_Snohomish,
+      rows =  difference_Snohomish > 0
+    )
   )
+
 ```
 
-There are `{r} nrow(num_rows_diff)` records with discrepancies.
+There are `{r} nrow(num_rows_diff)` records with discrepancies. All of which are related to occupied housing units. The differences range from fractions up to `{r} max(num_rows_diff$difference)` .
 
-###  SAEP Intercensal Estimates & April 1 Total Population County Estimates
+### SAEP Intercensal Estimates & April 1 Total Population County Estimates
 
 Comparing the SAEP Intercensal Estimates to the April 1 Total Population County Estimates. Only Total Population is available for comparison.
 
@@ -256,21 +310,15 @@ apr_num_rows_diff <- adj_and_apr |>
 adj_and_apr_fmt <- adj_and_apr |> 
   separate_wider_regex(cols = name, c(attribute = "\\w+", year = "\\d{4}")) |>
   select(-COUNTYFP) |> 
-   mutate(attribute = factor(attribute, levels = c("POP", "HHP", "GQ", "HU", "OHU"))) |> 
-  arrange(attribute) |>
-  pivot_wider(id_cols = c('year', 'attribute'), names_from = 'County', values_from = c(starts_with("saep"), 'difference')) |> 
-  mutate(attribute = case_when(attribute == "POP" ~ "Total Population",
-                              attribute == "HHP" ~ "Household Population",
-                              attribute == "GQ" ~ "Group Quarters",
-                              attribute == "HU" ~ "Housing Units",
-                              attribute == "OHU" ~ "Occupied Housing Units")) |> 
+  pivot_wider(id_cols = c('year', 'attribute'), names_from = 'County', values_from = c(starts_with("saep"), starts_with("apr"), 'difference')) |> 
+  mutate(attribute = case_when(attribute == "POP" ~ "Total Population")) |>
   select(year, attribute, ends_with('King'), ends_with('Kitsap'), ends_with('Pierce'), ends_with('Snohomish'))
 
-adj_and_co_fmt |> 
+adj_and_apr_fmt |> 
  group_by(attribute) |> 
  gt(rowname_col = "year") |> 
  fmt_number(columns = everything(),
-            decimals = 0,
+            decimals = 2,
             sep_mark = ",") |> 
  tab_style(
    style = cell_text(size = px(12)),
@@ -297,16 +345,16 @@ adj_and_co_fmt |>
   cols_label(
     year = "Year",
     saep_adj_inter_King = "Adj",
-    saep_co_est_King = "Apr 1",
+    apr_co_est_King = "Apr 1",
     difference_King = "\U0394",
     saep_adj_inter_Kitsap = "Adj",
-    saep_co_est_Kitsap = "Apr 1",
+    apr_co_est_Kitsap = "Apr 1",
     difference_Kitsap = "\U0394",
     saep_adj_inter_Pierce = "Adj",
-    saep_co_est_Pierce = "Apr 1",
+    apr_co_est_Pierce = "Apr 1",
     difference_Pierce = "\U0394",
     saep_adj_inter_Snohomish = "Adj",
-    saep_co_est_Snohomish = "Apr 1",
+    apr_co_est_Snohomish = "Apr 1",
     difference_Snohomish = "\U0394"
   )
 ```
