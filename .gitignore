@@ -3,4 +3,6 @@
 .RData
 .Ruserdata
 bootstrap.css
-
+parcelizer-prep/data
+parcelizer-prep/*.html
+parcelizer-prep/*_files/
