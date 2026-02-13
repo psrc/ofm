@@ -20,7 +20,7 @@ counties <- c("33", "35", "53", "61")
 years <- c(as.character(2020:2025))
 version <- 'November 7, 2025' # taken from OFM block metadata
 
-# functions ---------------------------------------------------------------
+# functions ----
 
 
 filter.for.psrc <- function(table) {
@@ -140,7 +140,7 @@ convert.file(filename, inputfileformat = "csv", outputfileformat = "rds")
 
 # df <- readRDS(file.path(base.dir, dir, "ofm_saep_intercensal.rds"))
 
-# QC ----------------------------------------------------------------------
+# QC ----
 
 # df <- readRDS(file.path(base.dir, dir, "ofm_saep.rds"))
 # 
