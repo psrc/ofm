@@ -15,6 +15,7 @@ data.dir <- file.path(dir, "original")
 filename <- "block20.csv"
 
 id.cols <- c("STATEFP", "COUNTYFP", "TRACTCE", "BLOCKCE", "GEOID20")
+id_vars <- paste(c(id.cols, "VERSION"), collapse = " + ")
 counties <- c("33", "35", "53", "61")
 years <- c(as.character(2020:2025))
 version <- 'November 7, 2025' # taken from OFM block metadata
@@ -26,7 +27,9 @@ filter.for.psrc <- function(table) {
   table[, (id.cols) := lapply(.SD, as.character), .SDcols = id.cols]
   dt <- table[COUNTYFP %in% counties, ]
   attributes <- c("POP", "HHP","GQ", "HU", "OHU")
-  cols <- apply(expand.grid(attributes, years), 1, function(x) paste0(x[1], x[2])) # create all combinations of years & attributes
+  
+  # create all combinations of years & attributes
+  cols <- apply(expand.grid(attributes, years), 1, function(x) paste0(x[1], x[2])) 
   allcols <- c(id.cols, cols)
   dt <- dt[, ..allcols][, VERSION := version]
   
@@ -34,34 +37,44 @@ filter.for.psrc <- function(table) {
 
 convert.file <- function(filename, inputfileformat, outputfileformat){
 
-  if (inputfileformat == "dbf")   df <- read.dbf(file.path(base.dir, data.dir, filename)) %>% as.data.table()
-  if (inputfileformat == "xlsx") df <- read.xlsx(file.path(base.dir, data.dir, filename)) %>% as.data.table()
-  if (inputfileformat == "csv")   df <- fread(file.path(base.dir, data.dir, filename)) %>% as.data.table()
+  if (inputfileformat == "dbf")   df <- read.dbf(file.path(base.dir, data.dir, filename)) 
+  if (inputfileformat == "xlsx") df <- read.xlsx(file.path(base.dir, data.dir, filename)) 
+  if (inputfileformat == "csv")   df <- fread(file.path(base.dir, data.dir, filename))
   
-  # 2020-25 data format
+  setDT(df)
+  
   dt <- filter.for.psrc(df)
 
-  # check for negative values ----
+  # qc for string numbers and negative values ----
   dt_id_colnames <- c(id.cols, "VERSION")
   dtm <- melt.data.table(dt,
                   id.vars = dt_id_colnames,
                   measure.vars = setdiff(colnames(dt), dt_id_colnames))
 
-  View(dtm[value < 0])
-  dtm[, value := as.numeric(value)]
-  browser()
-  dtm[value < 0, value := 0]
-
-  check <- dtm[value < 0]
-  nas <- dtm[, any(is.na(value))]
-  if(nas == TRUE) {
-    nas_df <- dtm[is.na(value),]
-    nas_df_m <- dcast.data.table(nas_df, STATEFP + COUNTYFP+ TRACTCE + BLOCKCE + GEOID20 + VERSION ~ variable, value.var = "value")
-    write.xlsx(nas_df_m, "J:\\OtherData\\OFM\\SAEP\\SAEP Extract_2025-11-07\\quality_check\\ofm_saep_qc_2025_11_07_nulls.xlsx")
+  # where columns are char, use readr::parse_number().
+  # "1,234.56" <- this is causing problems! When converting to numeric it will be NA
+  if(class(dtm$value) == 'character') {
+    dtm[, value := readr::parse_number(value)]
+    
+    if(any(is.na(dtm$value))) {
+      nas_df <- dtm[is.na(value),]
+      nas_df_m <- dcast(nas_df, 
+                        id_vars ~ variable,
+                        value.var = "value")
+      write.xlsx(nas_df_m, file.path(base.dir, dir, "\\quality_check\\ofm_saep_qc_2025_11_07_nulls.xlsx"))
+      
+      stop("NA values detected in column 'value'. Script stopped.")
+    } 
+  }
+  
+  if(any(dtm$value < 0, na.rm = TRUE)) {
+    View(dtm[value < 0])
+    stop("Negative values detected in column 'value'. Script stopped.")
   }
   
   # unmelt ----
-  dt <- dcast.data.table(dtm, STATEFP + COUNTYFP+ TRACTCE + BLOCKCE + GEOID20 + VERSION ~ variable, value.var = "value")
+ 
+  dt <- dcast(dtm, id_vars ~ variable, value.var = "value")
  
   if (outputfileformat == "dbf") write.dbf(dt, file.path(base.dir, dir, "ofm_saep.dbf"))
   if (outputfileformat == "rds") saveRDS(dt, file.path(base.dir, dir, "ofm_saep.rds"))
@@ -104,7 +117,7 @@ qc.rds <- function(years) {
   cols <- apply(expand.grid(attributes, years), 1, function(x) paste0(x[1], x[2]))
   allcols <- c("COUNTYFP", cols)
   odt <- ofm[, allcols, with = F]
-  # browser() 
+ 
   dt <- melt.data.table(odt, id.vars = "COUNTYFP", measure.vars = cols, variable.name = "variable", value.name = "estimate")
   dt[, `:=` (attribute = str_extract(variable, "[[:alpha:]]+"), YEAR = str_extract(variable, "[[:digit:]]+"))]
   dtsum <- dt[, lapply(.SD, sum), .SDcols = "estimate", by = .(COUNTY = COUNTYFP, attribute, YEAR)]
