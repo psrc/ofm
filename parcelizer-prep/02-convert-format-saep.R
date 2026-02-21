@@ -142,7 +142,7 @@ convert.file(filename, inputfileformat = "csv", outputfileformat = "rds")
 
 # QC ----
 
-# df <- readRDS(file.path(base.dir, dir, "ofm_saep.rds"))
+df <- readRDS(file.path(base.dir, dir, "ofm_saep.rds"))
 # 
 # years <- c(as.character(2020:2025))
 # dt <- qc.rds(years)

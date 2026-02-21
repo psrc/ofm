@@ -1,0 +1,307 @@
+---
+title: "Quality Checks"
+format: 
+  html:
+    toc: true
+editor: visual
+execute: 
+  echo: false
+  warning: false
+---
+
+```{r}
+library(data.table)
+library(tidyverse)
+library(psrcelmer)
+library(gt)
+
+options(scipen = 999)
+
+base_dir <- "J:/OtherData/OFM/SAEP"
+dir <- "SAEP Extract_2025-11-07"
+filename <- "ofm_saep.rds"
+estimate_year <- "2024"
+
+pub_dim <- 10
+```
+
+## SAEP vs Published April 1
+
+Compare unstaged SAEP latest estimate year to the latest published April 1 Total Population and Housing Unit data. This at least verifies whether there are null values or negative values in the SAEP data.
+
+## SAEP 
+
+This section is for unstaged data.
+
+```{r}
+
+df <- readRDS(file.path(base_dir, dir, filename))
+
+df_long <- df |> 
+  pivot_longer(str_subset(colnames(df), "\\d{4}")) |> 
+  separate_wider_regex(cols = name, c(attribute = "\\w+", year = "\\d{4}")) |> 
+  mutate(County = case_when(COUNTYFP == "33" ~ "King",
+                            COUNTYFP == "35" ~ "Kitsap",
+                            COUNTYFP == "53" ~ "Pierce",
+                            COUNTYFP == "61" ~ "Snohomish")) |> 
+  mutate(attribute = case_when(attribute == "POP" ~ "Total Population",
+                               attribute == "HHP" ~ "Household Population",
+                               attribute == "GQ" ~ "Group Quarters",
+                               attribute == "HU" ~ "Housing Units",
+                               attribute == "OHU" ~ "Occupied Housing Units")) |> 
+  mutate(attribute = factor(attribute, levels = rev(c("Housing Units", "Occupied Housing Units","Household Population", "Group Quarters", "Total Population")))) |>
+  arrange(attribute)
+
+```
+
+### Region
+
+```{r}
+# read ofm_saep.rds
+
+df_reg <- df_long |> 
+  group_by(attribute, year) |> 
+  summarise(estimate = sum(value))
+
+df_reg_wide <- df_reg |> 
+  pivot_wider(id_cols = c("attribute"), names_from = year, values_from = estimate) |> 
+  ungroup()
+
+df_reg_wide |>
+  gt(rowname_col = "attribute") |> 
+  fmt_number(columns = everything(),
+             decimals = 0,
+             sep_mark = ",") |> 
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(
+      columns = everything()
+    )
+  )
+
+```
+
+### County
+
+```{r}
+# aggregate by county
+df_co <- df |> 
+  pivot_longer(str_subset(colnames(df), "\\d{4}")) |> 
+  group_by(COUNTYFP, name) |> 
+  summarise(estimate = sum(value), .groups = "keep") |> 
+  mutate(County = case_when(COUNTYFP == "33" ~ "King",
+                            COUNTYFP == "35" ~ "Kitsap",
+                            COUNTYFP == "53" ~ "Pierce",
+                            COUNTYFP == "61" ~ "Snohomish")) |> 
+  separate_wider_regex(cols = name, c(attribute = "\\w+", year = "\\d{4}")) |> 
+  mutate(attribute = factor(attribute, levels = c("POP", "HHP", "GQ", "HU", "OHU"))) |> 
+  arrange(attribute) |> 
+  pivot_wider(id_cols = c('County', 'attribute'),
+              names_from = 'year',
+              values_from = 'estimate'
+  )
+ 
+
+df_co |> 
+   mutate(attribute = case_when(attribute == "POP" ~ "Total Population",
+                               attribute == "HHP" ~ "Household Population",
+                               attribute == "GQ" ~ "Group Quarters",
+                               attribute == "HU" ~ "Housing Units",
+                               attribute == "OHU" ~ "Occupied Housing Units")) |> 
+  group_by(County) |> 
+  gt(rowname_col = "attribute") |> 
+  fmt_number(columns = everything(),
+             decimals = 0,
+             sep_mark = ",") |> 
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(
+      columns = everything()
+    )
+  )
+```
+
+
+## Unstaged SAEP to Last Vintage in Elmer
+
+Compare the unstaged data to what is currently stored in Elmer since 2020 to get a sense of how block estimates have changed.
+
+```{r}
+elm_years_query <- "SELECT a.publication_dim_id, a.estimate_year, HU = SUM(a.housing_units), OHU = SUM(a.occupied_housing_units), GQPOP = SUM(a.group_quarters_population), HHPOP = SUM(a.household_population)
+FROM ofm.estimate_facts AS a
+WHERE a.publication_dim_id = 10 AND a.estimate_year BETWEEN 2020 AND 2024
+GROUP BY a.estimate_year, a.publication_dim_id;"
+
+df_elm_years <- get_query(sql = elm_years_query, db_name = "Elmer")
+
+df_elm_years_l <- df_elm_years |> 
+  mutate(POP = GQPOP + HHPOP) |> 
+  pivot_longer(cols = c("HU", "OHU", "GQPOP", "HHPOP", "POP"), 
+               names_to = "attribute", 
+               values_to = "elmer_estimate") |> 
+  mutate(attribute = case_when(attribute == "POP" ~ "Total Population",
+                               attribute == "HHPOP" ~ "Household Population",
+                               attribute == "GQPOP" ~ "Group Quarters",
+                               attribute == "HU" ~ "Housing Units",
+                               attribute == "OHU" ~ "Occupied Housing Units")) |> 
+  mutate(estimate_year = as.character(estimate_year))
+
+# long format
+df_reg <- df_reg |> 
+  rename(unstaged_saep_estimate = estimate)
+```
+
+```{r}
+df_comb <- df_reg |> 
+  left_join(df_elm_years_l , by = c('attribute' = 'attribute', 'year' = 'estimate_year')) |> 
+  pivot_wider(id_cols = "year", names_from = "attribute", values_from = c("unstaged_saep_estimate", "elmer_estimate")) 
+```
+
+```{r}
+
+df_comb |> 
+  gt(rowname_col = "year") |> 
+  fmt_number(columns = everything(),
+             decimals = 0,
+             sep_mark = ",") |> 
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(
+      columns = everything()
+    )
+  ) |> 
+  tab_spanner(
+    label = "Total Population",
+    columns = ends_with("_Total Population")
+  ) |> 
+  tab_spanner(
+    label = "Household Population",
+    columns = ends_with("_Household Population")
+  ) |> 
+  tab_spanner(
+    label = "Group Quarters Population",
+    columns = ends_with("_Group Quarters")
+  ) |> 
+  tab_spanner(
+    label = "Occupied Housing Units",
+    columns = ends_with("_Occupied Housing Units")
+  ) |> 
+   tab_spanner(
+    label = "Housing Units",
+    columns = ends_with("estimate_Housing Units")
+  ) |> 
+  cols_label(
+    year = "Year",
+    `unstaged_saep_estimate_Total Population` = "Unstaged",
+    `elmer_estimate_Total Population`    = "Elmer",
+    
+    `unstaged_saep_estimate_Household Population` = "Unstaged",
+    `elmer_estimate_Household Population` = "Elmer",
+    
+    `unstaged_saep_estimate_Group Quarters` = "Unstaged",
+    `elmer_estimate_Group Quarters` = "Elmer",
+    
+    `unstaged_saep_estimate_Occupied Housing Units` = "Unstaged",
+    `elmer_estimate_Occupied Housing Units` = "Elmer",
+    
+    `unstaged_saep_estimate_Housing Units` = "Unstaged",
+    `elmer_estimate_Housing Units` = "Elmer"
+    
+  )
+
+
+```
+
+### Difference
+
+Unstaged SAEP minus latest Vintage SAEP in Elmer
+
+#### Region
+
+```{r}
+df_delta <- df_reg |> 
+  left_join(df_elm_years_l , by = c('attribute' = 'attribute', 'year' = 'estimate_year')) |> 
+  mutate(delta = unstaged_saep_estimate - elmer_estimate) |> 
+  mutate(delta = round(delta, 0))
+```
+
+```{r}
+df_delta2 <- df_delta |> 
+  select(attribute, year, delta) |> 
+  pivot_wider(id_cols = "attribute", names_from = "year", values_from = "delta") |> 
+  ungroup()
+```
+
+```{r}
+
+df_delta2 |> 
+  gt(rowname_col = "attribute") |> 
+  fmt_number(columns = everything(),
+             decimals = 0,
+             sep_mark = ",") |> 
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(
+      columns = everything()
+    )
+  ) 
+```
+
+#### County
+
+```{r}
+elm_co_years_query <- "SELECT a.publication_dim_id, a.estimate_year, b.county_name, HU = SUM(a.housing_units), OHU = SUM(a.occupied_housing_units), GQPOP = SUM(a.group_quarters_population), HHPOP = SUM(a.household_population)
+FROM ofm.estimate_facts AS a LEFT JOIN census.geography_dim AS b
+ON a.geography_dim_id = b.geography_dim_id
+WHERE a.publication_dim_id = 10 AND a.estimate_year BETWEEN 2020 AND 2024
+GROUP BY a.publication_dim_id, a.estimate_year, b.county_name
+ORDER BY estimate_year;"
+
+df_co_elm_years <- get_query(sql = elm_co_years_query, db_name = "Elmer") #pivot long
+
+df_co_elm_years_l <- df_co_elm_years |> 
+  mutate(POP = HHPOP + GQPOP) |> 
+  pivot_longer(cols = c("HU", "OHU", "HHPOP", "GQPOP", "POP"), names_to = "attribute", values_to = "elmer_estimate") |>
+  mutate(attribute = case_when(attribute == "HHPOP" ~ "HHP",
+                               attribute == "GQPOP" ~ "GQ",
+                               .default = attribute),
+         estimate_year = as.character(estimate_year)
+         )
+
+df_co_l <- df_co |> 
+  pivot_longer(cols = as.character(2020:2025), names_to = "estimate_year", values_to = "unstaged_saep_estimate")
+
+df_co_delta <- df_co_l|> 
+  left_join(df_co_elm_years_l, by = c("estimate_year" = "estimate_year", "County" = "county_name", "attribute" = "attribute")) |> 
+  mutate(delta = unstaged_saep_estimate - elmer_estimate) |> 
+  mutate(delta = round(delta, 0))
+
+```
+
+```{r}
+df_co_delta2 <- df_co_delta |> 
+  select(attribute, County, estimate_year, delta) |> 
+  mutate(attribute = case_when(attribute == "POP" ~ "Total Population",
+                               attribute == "HHP" ~ "Household Population",
+                               attribute == "GQ" ~ "Group Quarters",
+                               attribute == "HU" ~ "Housing Units",
+                               attribute == "OHU" ~ "Occupied Housing Units")) |> 
+  pivot_wider(id_cols = c("County", "attribute"), names_from = "estimate_year", values_from = "delta") |> 
+  ungroup()
+```
+
+```{r}
+df_co_delta2 |> 
+  group_by(County) |> 
+  gt(rowname_col = "attribute") |> 
+  fmt_number(columns = everything(),
+             decimals = 0,
+             sep_mark = ",") |> 
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(
+      columns = everything()
+    )
+  )
+```
+
