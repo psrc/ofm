@@ -4,21 +4,23 @@
 
 # For QC (comparing April 1 to Block estimates), download from here and save to sub-dir "quality_check/published": https://ofm.wa.gov/washington-data-research/population-demographics/population-estimates/april-1-official-population-estimates
 
-library(foreign)
-library(data.table)
-library(openxlsx)
-library(tidyverse)
+# library(foreign)
+# library(data.table)
+# library(openxlsx)
+# library(tidyverse)
+# 
+# base.dir <- "J:/OtherData/OFM/SAEP"
+# dir <- "SAEP Extract_2025-11-07"
+# data.dir <- file.path(dir, "original")
+# filename <- "block20.csv"
+# 
+# id.cols <- c("STATEFP", "COUNTYFP", "TRACTCE", "BLOCKCE", "GEOID20")
+# id_vars <- paste(c(id.cols, "VERSION"), collapse = " + ")
+# counties <- c("33", "35", "53", "61")
+# years <- c(as.character(2020:2025))
+# version <- 'November 7, 2025' # taken from OFM block metadata
 
-base.dir <- "J:/OtherData/OFM/SAEP"
-dir <- "SAEP Extract_2025-11-07"
-data.dir <- file.path(dir, "original")
-filename <- "block20.csv"
-
-id.cols <- c("STATEFP", "COUNTYFP", "TRACTCE", "BLOCKCE", "GEOID20")
-id_vars <- paste(c(id.cols, "VERSION"), collapse = " + ")
-counties <- c("33", "35", "53", "61")
-years <- c(as.character(2020:2025))
-version <- 'November 7, 2025' # taken from OFM block metadata
+source("parcelizer-prep/00-global-vars.R")
 
 # functions ----
 
@@ -137,16 +139,6 @@ qc.rds <- function(years) {
 convert.file(filename, inputfileformat = "csv", outputfileformat = "rds")
 
 # read intercensal dataset ----
-
 # df <- readRDS(file.path(base.dir, dir, "ofm_saep_intercensal.rds"))
-
-# QC ----
-
-df <- readRDS(file.path(base.dir, dir, "ofm_saep.rds"))
-# 
-# years <- c(as.character(2020:2025))
-# dt <- qc.rds(years)
-# dt
-# write.xlsx(dt, file.path(base.dir, dir, "quality_check", paste0("ofm_saep_qc_", Sys.Date(), ".xlsx")))
 
 

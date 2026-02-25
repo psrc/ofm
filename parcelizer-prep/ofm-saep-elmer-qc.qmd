@@ -5,35 +5,33 @@ format:
     toc: true
 editor: visual
 execute: 
+  eval: true
   echo: false
   warning: false
 ---
 
-```{r}
+```{r setup, eval=TRUE}
 library(data.table)
 library(tidyverse)
 library(psrcelmer)
 library(gt)
+library(gtExtras)
 
 options(scipen = 999)
 
 base_dir <- "J:/OtherData/OFM/SAEP"
 dir <- "SAEP Extract_2025-11-07"
 filename <- "ofm_saep.rds"
-estimate_year <- "2024"
+# estimate_year <- "2024"
 
 pub_dim <- 10
 ```
-
-## SAEP vs Published April 1
-
-Compare unstaged SAEP latest estimate year to the latest published April 1 Total Population and Housing Unit data. This at least verifies whether there are null values or negative values in the SAEP data.
 
 ## SAEP 
 
 This section is for unstaged data.
 
-```{r}
+```{r unstaged saep}
 
 df <- readRDS(file.path(base_dir, dir, filename))
 
@@ -305,3 +303,56 @@ df_co_delta2 |>
   )
 ```
 
+## SAEP vs Published April 1
+
+Compare unstaged SAEP latest estimate year to the latest published April 1 Total Population and Housing Unit data. This at least verifies whether there are null values or negative values in the SAEP data.
+
+```{r data apr1, eval=TRUE}
+source(here::here("parcelizer-prep/03-compare-to-apr1.R"))
+
+dsa <- df_saep_apr |> 
+  select(YEAR, COUNTYNAME, POP_diff, HU_diff) |> 
+  pivot_wider(id_cols = "YEAR", names_from = COUNTYNAME, values_from = c("POP_diff", "HU_diff"))
+```
+
+
+```{r plot apr1, eval=TRUE}
+dsa |> 
+  gt(rowname_col = "YEAR") |>
+  fmt_number(columns = everything(),
+             decimals = 0,
+             sep_mark = ",") |>
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(
+      columns = everything()
+    )
+  ) |>
+  tab_spanner(
+    label = "King",
+    columns = ends_with("King")
+  ) |>
+  tab_spanner(
+    label = "Kitsap",
+    columns = ends_with("Kitsap")
+  ) |>
+  tab_spanner(
+    label = "Pierce",
+    columns = ends_with("Pierce")
+  ) |>
+  tab_spanner(
+    label = "Snohomish",
+    columns = ends_with("Snohomish")
+  ) |> 
+  cols_label(
+    YEAR = "Year",
+    `POP_diff_King` = "Pop \U0394",
+    `HU_diff_King`  = "HU \U0394",
+    `POP_diff_Kitsap` = "Pop \U0394",
+    `HU_diff_Kitsap`  = "HU \U0394",
+    `POP_diff_Pierce` = "Pop \U0394",
+    `HU_diff_Pierce`  = "HU \U0394",
+    `POP_diff_Snohomish` = "Pop \U0394",
+    `HU_diff_Snohomish`  = "HU \U0394"
+  )
+```
