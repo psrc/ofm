@@ -27,7 +27,9 @@ filename <- "ofm_saep.rds"
 pub_dim <- 10
 ```
 
-## SAEP 
+This document provides quality checks on the latest SAEP Vintage before it is finalized in Elmer. Unstaged data refers to `r dir` . The last vintage in Elmer at the time of this report refers to the 2024 Vintage.
+
+## SAEP
 
 This section is for unstaged data.
 
@@ -118,7 +120,6 @@ df_co |>
     )
   )
 ```
-
 
 ## Unstaged SAEP to Last Vintage in Elmer
 
@@ -314,7 +315,6 @@ dsa <- df_saep_apr |>
   select(YEAR, COUNTYNAME, POP_diff, HU_diff) |> 
   pivot_wider(id_cols = "YEAR", names_from = COUNTYNAME, values_from = c("POP_diff", "HU_diff"))
 ```
-
 
 ```{r plot apr1, eval=TRUE}
 dsa |> 

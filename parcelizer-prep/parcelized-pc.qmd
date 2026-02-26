@@ -1,0 +1,99 @@
+---
+title: "Quality Check Parcelized Data"
+format: html
+editor: visual
+execute: 
+  echo: false
+  warning: false
+---
+
+```{r}
+library(openxlsx)
+library(tidyverse)
+library(gt)
+
+source(here::here("parcelizer-prep/00-global-vars.R"))
+
+# read xlsx
+file_path <- file.path("J:/OtherData/OFM/SAEP", dir, "quality_check", "qc-parcelized-estimates.xlsx")
+sheet_names <- getSheetNames(file_path)
+
+dfs <- map(sheet_names, ~read.xlsx(file_path, sheet = .x))
+
+dfs[[2]] <- dfs[[2]] |> 
+  rename(est_year = estimate_year)
+
+dfs[[1]] <- dfs[[1]] |> 
+  mutate(est_year = as.double(est_year))
+```
+
+## Parcelized vs Elmer
+
+### Region
+
+```{r}
+# join all 3 tables 
+
+df <- dfs |> 
+  reduce(~left_join(.x, .y, by = "est_year")) |> 
+  relocate(publication_dim_id, .before = "est_year")
+
+pubid <- unique(df$publication_dim_id)
+```
+
+OFM SAEP data is based on Publication Dim ID `r pubid`: 2025 Vintage
+
+P = Parcelized estimates, E = Elmer estimates
+```{r}
+df |> 
+  mutate(est_year = as.character(est_year)) |> 
+  gt(rowname_col = "est_year") |>
+  cols_hide(columns = c(publication_dim_id, parcel_tot)) |> 
+  fmt_number(columns = everything(),
+             decimals = 0,
+             sep_mark = ",") |>
+  tab_style(
+    style = cell_text(size = px(12)),
+    locations = cells_body(
+      columns = everything()
+    )
+  ) |>
+  tab_spanner(
+    label = "Group Quarters",
+    columns = c(parcel_gq, GQPOP, diff_gq)
+  ) |>
+  tab_spanner(
+    label = "Household Population",
+    columns = c(parcel_hhp, HHPOP, diff_hhpop)
+  ) |>
+  tab_spanner(
+    label = "Occupied Housing Units",
+    columns = c(parcel_ohu, OHU, diff_ohu)
+  ) |>
+  tab_spanner(
+    label = "Housing Units",
+    columns = c(parcel_hu, HU, diff_hu)
+  ) |>
+  cols_label(
+    est_year = "Year",
+    parcel_gq = "P", 
+    GQPOP = "E", 
+    diff_gq ="\U0394",
+    parcel_hhp = "P", 
+    HHPOP = "E", 
+    diff_hhpop ="\U0394",
+    parcel_ohu = "P", 
+    OHU = "E", 
+    diff_ohu ="\U0394",
+    parcel_hu = "P", 
+    HU = "E", 
+    diff_hu ="\U0394"
+    
+  ) |> 
+   cols_align(
+    align = "center",
+    columns = -est_year
+  )
+```
+
+
